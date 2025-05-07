@@ -1,14 +1,15 @@
-
 {
-  "name": "Tsunami Alert BR",
-  "short_name": "TsunamiBR",
+  "name": "Alerta de Tsunami",
+  "short_name": "TsunamiAlert",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
-  "description": "Alerta de Tsunami em tempo real para João Pessoa - PB",
-  "icons": [{
-    "src": "icon.png",
-    "type": "image/png",
-    "sizes": "512x512"
-  }]
+  "description": "Alerta em tempo real para risco de tsunami em João Pessoa",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
