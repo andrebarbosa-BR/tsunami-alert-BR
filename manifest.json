@@ -1,10 +1,12 @@
+
 {
-  "name": "Alerta de Tsunami",
-  "short_name": "TsunamiAlert",
+  "name": "Tsunami Alert BR",
+  "short_name": "TsunamiBR",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
-  "description": "Alerta em tempo real para risco de tsunami em João Pessoa",
+  "theme_color": "#0088cc",
+  "description": "App de alerta de tsunami e monitor sísmico em tempo real.",
   "icons": [
     {
       "src": "icon.png",

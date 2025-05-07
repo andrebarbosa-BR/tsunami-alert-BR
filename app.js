@@ -1,75 +1,89 @@
-const alerta = document.getElementById('alerta');
+
 const statusDiv = document.getElementById('status');
+const alerta = document.getElementById('alerta');
+const lista = document.getElementById('lista');
+const salvarConfig = document.getElementById('salvarConfig');
+
+let minMag = parseFloat(localStorage.getItem('minMag') || 7);
+let maxDist = parseFloat(localStorage.getItem('maxDist') || 3000);
 
 // Coordenadas de João Pessoa
 const latJP = -7.115;
 const lonJP = -34.863;
 
-// Verificar conexão com a internet
+document.getElementById('minMag').value = minMag;
+document.getElementById('maxDist').value = maxDist;
+
+salvarConfig.addEventListener('click', () => {
+  minMag = parseFloat(document.getElementById('minMag').value);
+  maxDist = parseFloat(document.getElementById('maxDist').value);
+  localStorage.setItem('minMag', minMag);
+  localStorage.setItem('maxDist', maxDist);
+  checarTerremotos(); // atualizar imediatamente
+});
+
 function verificarConexao() {
-    if (navigator.onLine) {
-        statusDiv.textContent = "🟢 Online";
-        statusDiv.style.color = "green";
-        checarTerremotos();
-    } else {
-        statusDiv.textContent = "🔴 Offline - conecte-se para atualizações";
-        statusDiv.style.color = "red";
-    }
+  if (navigator.onLine) {
+    statusDiv.textContent = '🟢 Online';
+    statusDiv.classList.add('status');
+    checarTerremotos();
+  } else {
+    statusDiv.textContent = '🔴 Offline';
+    statusDiv.classList.remove('status');
+  }
 }
 
-// Calcular a distância entre dois pontos geográficos (em km)
 function calcularDistancia(lat1, lon1, lat2, lon2) {
-    const toRad = deg => deg * Math.PI / 180;
-    const R = 6371; // Raio da Terra em km
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))); // Distância em km
+  const R = 6371;
+  const toRad = deg => deg * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Função para checar terremotos
-async function checarTerremotos() {
-    try {
-        const res = await fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_hour.geojson");
-        const data = await res.json();
-        for (let quake of data.features) {
-            const mag = quake.properties.mag;
-            const coords = quake.geometry.coordinates;
-            const [lon, lat] = coords;
-
-            const dist = calcularDistancia(lat, lon, latJP, lonJP);
-
-            if (mag >= 7 && dist <= 3000) { // Magnitude maior que 7 e dentro de 3000 km de João Pessoa
-                alerta.style.display = "block";
-                alerta.textContent = "⚠️ RISCO DE TSUNAMI! EVACUAR IMEDIATAMENTE!";
-                tocarAlarme();
-                enviarNotificacao();
-            }
-        }
-    } catch (e) {
-        console.error("Erro ao buscar terremotos:", e);
-    }
-}
-
-// Função para tocar alarme
 function tocarAlarme() {
-    const audio = new Audio("alarme.mp3");
-    audio.play();
+  const audio = new Audio("alarme.mp3");
+  audio.play();
 }
 
-// Função para enviar notificação
-function enviarNotificacao() {
-    if (Notification.permission === "granted") {
-        new Notification("Alerta de Tsunami: Evacuação Imediata Requerida!");
-    }
+function enviarNotificacao(msg) {
+  if (Notification.permission === "granted") {
+    new Notification(msg);
+  }
 }
 
-// Solicitar permissão para notificações
-if (Notification.permission !== "granted") {
-    Notification.requestPermission();
+async function checarTerremotos() {
+  try {
+    const res = await fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson");
+    const data = await res.json();
+    lista.innerHTML = '';
+
+    data.features.forEach(quake => {
+      const mag = quake.properties.mag;
+      const lugar = quake.properties.place;
+      const tempo = new Date(quake.properties.time).toLocaleString();
+      const [lon, lat] = quake.geometry.coordinates;
+      const dist = calcularDistancia(lat, lon, latJP, lonJP);
+      const eventoEl = document.createElement('div');
+      eventoEl.className = 'evento';
+      eventoEl.innerHTML = `<strong>${mag}</strong> - ${lugar} (${tempo})<br><small>Distância até João Pessoa: ${dist.toFixed(1)} km</small>`;
+      lista.appendChild(eventoEl);
+
+      if (mag >= minMag && dist <= maxDist) {
+        alerta.style.display = "block";
+        alerta.textContent = `⚠️ RISCO DE TSUNAMI! Magnitude ${mag} a ${dist.toFixed(0)} km. EVACUAR!`;
+        tocarAlarme();
+        enviarNotificacao(`Risco de tsunami: ${mag} - ${lugar}`);
+      }
+    });
+  } catch (err) {
+    console.error("Erro ao buscar dados:", err);
+  }
 }
 
-// Verificar conexão periodicamente
+verificarConexao();
+if (Notification.permission !== "granted") Notification.requestPermission();
 window.addEventListener('online', verificarConexao);
 window.addEventListener('offline', verificarConexao);
-verificarConexao();
+setInterval(checarTerremotos, 60000);
